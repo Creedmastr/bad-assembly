@@ -15,3 +15,15 @@ impl Register<i32> {
         return new;
     }
 }
+
+impl Register<String> {
+    pub fn update_value(&self, x: String) -> Self {
+        let new = Register {
+            name: self.name.clone(),
+
+            value: x
+        };
+
+        return new;
+    }
+}

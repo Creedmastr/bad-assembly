@@ -1,6 +1,10 @@
+#![allow(dead_code)]
+
 use std::ops::Not;
 
 use registers::{operations::RegisterOperationsArithmetic, reg_struct::Register};
+
+use crate::registers::operations::RegisterOperationsString;
 
 mod registers;
 
@@ -14,42 +18,119 @@ fn main() {
     }
 
     let mut arithmetics_register: Vec<Register<i32>> = vec![];
+    let mut string_register: Vec<Register<String>> = vec![];
 
     let file_content = std::fs::read_to_string(&args[1]).unwrap();
 
     for line in file_content.lines() {
         let line = line.to_string();
 
+        let line = line.to_lowercase();
+
         match line {
-            x if x.starts_with("ADD ") => {
-                let register_name = x.replace("ADD ", "");
+            x if x.starts_with("add ") || x.starts_with("sub ") => {
+                let is_add = match x.starts_with("add ") {
+                    true => true,
+                    false => false,
+                };
+
+                let register_name = x.replace("add ", "").replace("sub ", "");
 
                 let current_register = arithmetics_register.search(&register_name);
 
-                arithmetics_register.update(
-                    register_name.clone(),
-                    &Register {
-                        name: register_name,
-                        value: current_register.value + 1,
-                    },
-                )
+                let value = match is_add {
+                    true => current_register.0.value + 1,
+                    false => current_register.0.value - 1,
+                };
+
+                arithmetics_register.update(&Register {
+                    name: register_name,
+                    value,
+                })
             }
 
-            x if x.starts_with("MOV ") => {
+            x if x.starts_with("mov ") => {
+                let is_string = x.contains(r#"""#);
+
                 let tokens: Vec<String> = x
-                    .replace("MOV ", "")
+                    .replace("mov ", "")
+                    .replace(" ", "")
+                    .replace(r#"""#, "")
+                    .split(",")
+                    .map(|f| f.to_string())
+                    .collect();
+
+                match is_string {
+                    true => {
+                        string_register.update(&Register {
+                            name: tokens[0].clone(),
+                            value: tokens[1].clone(),
+                        });
+                    }
+
+                    false => {
+                        arithmetics_register.update(&Register {
+                            name: tokens[0].clone(),
+                            value: tokens[1].parse().unwrap(),
+                        });
+                    }
+                }
+            }
+
+            x if x.starts_with("mul ") || x.starts_with("div ") => {
+                let is_mul = x.contains("mul");
+
+                let mul_value = arithmetics_register.search(&x.replace("mul ", "")).0.value;
+                let ax_value = arithmetics_register.search(&String::from("ax")).0.value;
+
+                match is_mul {
+                    true => {
+                        arithmetics_register.update(&Register {
+                            name: "ax".to_string(),
+                            value: mul_value * ax_value,
+                        });
+                    },
+
+                    false => {
+                        arithmetics_register.update(&Register {
+                            name: "ax".to_string(),
+                            value: mul_value / ax_value,
+                        })
+                    }
+                }
+
+            }
+
+            x if x.starts_with("imul ") => {
+                let tokens: Vec<String> = x
+                    .replace("imul ", "")
                     .replace(" ", "")
                     .split(",")
                     .map(|f| f.to_string())
                     .collect();
 
-                arithmetics_register.update(
-                    tokens[0].clone(),
-                    &Register {
-                        name: tokens[0].clone(),
-                        value: tokens[1].parse().unwrap(),
-                    },
-                );
+                let first_value = arithmetics_register.search(&tokens[1]).0.value;
+                let second_value = arithmetics_register.search(&tokens[2]).0.value;
+
+                arithmetics_register.update(&Register {
+                    name: tokens[0].clone(),
+                    value: first_value * second_value,
+                })
+            }
+
+            x if x.starts_with("_printf ") => {
+                // Basically print a string if it exits, or else it prints a number (either it exists or 0)
+                let register = x.replace("_printf ", "");
+
+                let int_search = arithmetics_register.search(&register);
+                let string_search = string_register.search(&register);
+
+                if !string_search.1 {
+                    println!("{}", string_search.0.value);
+                    continue;
+                }
+
+                println!("{}", int_search.0.value);
             }
 
             _ => {
@@ -58,5 +139,10 @@ fn main() {
         }
     }
 
-    println!("{:#?}", arithmetics_register);
+    if args.contains(&String::from("-debug")) {
+        eprintln!(
+            "\nArithmetic: {:#?}\nString: {:#?}",
+            arithmetics_register, string_register
+        );
+    }
 }
