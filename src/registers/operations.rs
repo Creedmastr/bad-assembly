@@ -1,12 +1,12 @@
 use super::reg_struct::Register;
 
-pub trait RegisterOperationsArithmetic {
+pub trait RegisterOperationsInteger {
     fn update(&mut self, v: &Register<i32>);
 
     fn search(&self, x: &String) -> (Register<i32>, bool); // Returns 0 or 1 depending on whether the register was just created or not
 }
 
-impl RegisterOperationsArithmetic for Vec<Register<i32>> {
+impl RegisterOperationsInteger for Vec<Register<i32>> {
     fn update(&mut self, v: &Register<i32>) {
         let mut index: usize = 0;
         let mut is_updated = false;

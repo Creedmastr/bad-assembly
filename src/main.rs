@@ -2,7 +2,7 @@
 
 use std::ops::Not;
 
-use registers::{operations::RegisterOperationsArithmetic, reg_struct::Register};
+use registers::{operations::RegisterOperationsInteger, reg_struct::Register};
 
 use crate::registers::operations::RegisterOperationsString;
 
@@ -17,7 +17,7 @@ fn main() {
         panic!("ERROR: Wrong file")
     }
 
-    let mut arithmetics_register: Vec<Register<i32>> = vec![];
+    let mut int_register: Vec<Register<i32>> = vec![];
     let mut string_register: Vec<Register<String>> = vec![];
 
     let file_content = std::fs::read_to_string(&args[1]).unwrap();
@@ -36,14 +36,14 @@ fn main() {
 
                 let register_name = x.replace("add ", "").replace("sub ", "");
 
-                let current_register = arithmetics_register.search(&register_name);
+                let current_register = int_register.search(&register_name);
 
                 let value = match is_add {
                     true => current_register.0.value + 1,
                     false => current_register.0.value - 1,
                 };
 
-                arithmetics_register.update(&Register {
+                int_register.update(&Register {
                     name: register_name,
                     value,
                 })
@@ -69,7 +69,7 @@ fn main() {
                     }
 
                     false => {
-                        arithmetics_register.update(&Register {
+                        int_register.update(&Register {
                             name: tokens[0].clone(),
                             value: tokens[1].parse().unwrap(),
                         });
@@ -80,27 +80,27 @@ fn main() {
             x if x.starts_with("mul ") || x.starts_with("div ") => {
                 let is_mul = x.contains("mul");
 
-                let mul_value = arithmetics_register
+                let mul_value = int_register
                     .search(&x.replace("mul ", "").replace("div ", ""))
                     .0
                     .value;
-                let ax_value = arithmetics_register.search(&String::from("ax")).0.value;
+                let ax_value = int_register.search(&String::from("ax")).0.value;
 
                 match is_mul {
                     true => {
-                        arithmetics_register.update(&Register {
+                        int_register.update(&Register {
                             name: "ax".to_string(),
                             value: mul_value * ax_value,
                         });
                     }
 
                     false => {
-                        arithmetics_register.update(&Register {
+                        int_register.update(&Register {
                             name: "ax".to_string(),
                             value: ax_value / mul_value,
                         });
 
-                        arithmetics_register.update(&Register {
+                        int_register.update(&Register {
                             name: "ah".to_string(),
                             value: ax_value % mul_value,
                         });
@@ -108,28 +108,44 @@ fn main() {
                 }
             }
 
-            x if x.starts_with("imul ") => {
+            x if x.starts_with("imul ") || x.starts_with("idiv ") => {
+                let is_mul = x.contains("imul ");
+
                 let tokens: Vec<String> = x
                     .replace("imul ", "")
+                    .replace("idiv ", "")
                     .replace(" ", "")
                     .split(",")
                     .map(|f| f.to_string())
                     .collect();
 
-                let first_value = arithmetics_register.search(&tokens[1]).0.value;
-                let second_value = arithmetics_register.search(&tokens[2]).0.value;
+                let first_value = int_register.search(&tokens[0]).0.value;
+                let second_value = int_register.search(&tokens[1]).0.value;
 
-                arithmetics_register.update(&Register {
-                    name: tokens[0].clone(),
-                    value: first_value * second_value,
-                })
+                match is_mul {
+                    true => int_register.update(&Register {
+                        name: tokens[0].clone(),
+                        value: first_value * second_value,
+                    }),
+
+                    false => {
+                        int_register.update(&Register {
+                            name: tokens[0].clone(),
+                            value: first_value / second_value,
+                        });
+                        int_register.update(&Register {
+                            name: "ah".to_string(),
+                            value: first_value % second_value,
+                        });
+                    }
+                }
             }
 
             x if x.starts_with("_printf ") => {
                 // Basically print a string if it exits, or else it prints a number (either it exists or 0)
                 let register = x.replace("_printf ", "");
 
-                let int_search = arithmetics_register.search(&register);
+                let int_search = int_register.search(&register);
                 let string_search = string_register.search(&register);
 
                 if !string_search.1 {
@@ -149,7 +165,7 @@ fn main() {
     if args.contains(&String::from("-debug")) {
         eprintln!(
             "\nArithmetic: {:#?}\nString: {:#?}",
-            arithmetics_register, string_register
+            int_register, string_register
         );
     }
 }
