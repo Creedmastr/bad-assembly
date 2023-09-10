@@ -43,8 +43,6 @@ fn main() {
                     .map(|f| f.to_string())
                     .collect();
 
-                let current_register = arithmetics_register.search(&tokens[0]);
-                
                 arithmetics_register.update(
                     tokens[0].clone(),
                     &Register {
