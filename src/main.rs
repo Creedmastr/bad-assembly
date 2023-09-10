@@ -80,7 +80,10 @@ fn main() {
             x if x.starts_with("mul ") || x.starts_with("div ") => {
                 let is_mul = x.contains("mul");
 
-                let mul_value = arithmetics_register.search(&x.replace("mul ", "")).0.value;
+                let mul_value = arithmetics_register
+                    .search(&x.replace("mul ", "").replace("div ", ""))
+                    .0
+                    .value;
                 let ax_value = arithmetics_register.search(&String::from("ax")).0.value;
 
                 match is_mul {
@@ -89,16 +92,20 @@ fn main() {
                             name: "ax".to_string(),
                             value: mul_value * ax_value,
                         });
-                    },
+                    }
 
                     false => {
                         arithmetics_register.update(&Register {
                             name: "ax".to_string(),
-                            value: mul_value / ax_value,
-                        })
+                            value: ax_value / mul_value,
+                        });
+
+                        arithmetics_register.update(&Register {
+                            name: "ah".to_string(),
+                            value: ax_value % mul_value,
+                        });
                     }
                 }
-
             }
 
             x if x.starts_with("imul ") => {
